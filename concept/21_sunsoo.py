@@ -1,0 +1,85 @@
+import sys
+from collections import defaultdict
+from heapq import heappop, heappush
+
+sys.stdin = open('input.txt')
+inp = sys.stdin.readline
+
+
+class Player:
+    sum, avg, cnt = 0, 0, 0
+    name = ""
+
+    def update(self, dsum, dcnt):
+        self.sum += dsum
+        self.cnt += dcnt
+        self.avg = 0 if self.cnt == 0 else round(self.sum / self.cnt, 1)
+
+    def __repr__(self):
+        return f"({self.sum}, {self.avg}, {self.cnt})"
+
+
+n, m = map(int, inp().split())
+scout_db = defaultdict(dict)
+player_db = [Player() for _ in range(m+1)]
+maxsum, minsum, maxavg, minavg = [], [], [], []
+name_list = inp().split()
+name_list.sort()
+name_db = {}
+
+
+def push(pid):
+    heappush(maxsum, (-player_db[pid].sum, -pid))
+    heappush(minsum, (player_db[pid].sum, pid))
+    heappush(maxavg, (-player_db[pid].avg, -pid))
+    heappush(minavg, (player_db[pid].avg, pid))
+
+
+for i in range(1, m+1):
+    name_db[name_list[i-1]] = i
+    player_db[i].name = name_list[i-1]
+    push(i)
+
+for _ in range(int(inp())):
+    query = inp().split()
+    cmd = query[0]
+    if cmd == 'EVAL':
+        sid = int(query[1])
+        pname = query[2]
+        score = int(query[3])
+        pid = name_db[pname]
+        if pid in scout_db[sid]:
+            player_db[pid].update(score - scout_db[sid][pid], 0)
+        else:
+            player_db[pid].update(score, 1)
+            scout_db[sid][pid] = score
+            push(pid)
+    elif cmd == 'CLEAR':
+        sid = int(query[1])
+        for pid, score in scout_db[sid].items():
+            player_db[pid].update(-score, -1)
+            push(pid)
+        scout_db[sid].clear()
+    elif cmd == 'SUM':
+        pq = maxsum if int(query[1]) else minsum
+        while abs(pq[0][0]) != player_db[abs(pq[0][1])].sum:
+            heappop(pq)
+        print(player_db[abs(pq[0][1])].name)
+    else:
+        pq = maxavg if int(query[1]) else minavg
+        while abs(pq[0][0]) != player_db[abs(pq[0][1])].avg:
+            heappop(pq)
+        print(player_db[abs(pq[0][1])].name)
+
+
+# ======================================================
+class MaxData:
+    def __init__(self, p, n):
+        self.priority = p
+        self.name = n
+
+    def __lt__(self, other):
+        if self.priority == other.priority:
+            return self.name > other.name
+        return self.priority > other.priority
+# ======================================================
